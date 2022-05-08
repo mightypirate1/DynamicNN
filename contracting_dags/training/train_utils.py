@@ -10,7 +10,7 @@ def train_epoch(
     train_dataloader,
     optimizer,
     loss=binary_cross_entropy_with_logits,
-    atrition_regularization=0.15,
+    atrition_regularization=0.025,
     atrition=0.0,
 ):
 
@@ -40,10 +40,11 @@ def train_batch(dag, x, yt, loss_fcn, optimizer, atrition_regularization=0.15, a
 
     # Regularization
     regularizer_loss = 0
-    for node in dag.hidden_nodes + dag.output_nodes:
+    for n, node in enumerate(dag.nodes, 1):
         w = torch_abs(node.input_weights)
         b = torch_abs(node.bias)
-        regularizer_loss += atrition_regularization * atrition * ((w.sum() + b) / len(dag.nodes) ** 2)
+        weight = 1 + (n / len(dag))
+        regularizer_loss += atrition_regularization * atrition * ((w.sum() + b) / len(dag.nodes) ** 1) * weight
 
     # Add things up
     loss = value_loss + regularizer_loss
@@ -56,6 +57,7 @@ def compute_accuracy_and_atrition(dag, dataloader, old_accuracy):
     for batch_n, (xb, ytb) in enumerate(iter(dataloader), start=1):
         ypb = dag(xb, training=False).round()
         acc += 1 - torch.abs((ypb - ytb)).mean()
-    accuracy = to_float((1.0 - 0.05) * old_accuracy + 0.05 * (acc / batch_n))
+    new_accuracy = acc / batch_n
+    accuracy = to_float((1.0 - 0.05) * old_accuracy + 0.05 * new_accuracy)
     atrition = np.clip(2 * accuracy - 1, 0., 1.)
     return accuracy, atrition
