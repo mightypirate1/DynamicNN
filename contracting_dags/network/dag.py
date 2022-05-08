@@ -56,6 +56,7 @@ class DAG(torch.nn.Module):
         if (node := self.find_node_with_only_one_edge()):
             return self.contract_node_with_only_one_edge(node)
 
+
     def disable_weakest_node(self, threshold=0.1):
         weakest_val, weakest_node = np.inf, None
         for node in self.hidden_nodes:

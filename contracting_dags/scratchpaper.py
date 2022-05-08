@@ -10,8 +10,8 @@ from tools.visualize import draw_dag, draw_dag_weights
 
 batch_size = 100
 
-dataset = XORData
-# dataset = ANDData
+# dataset = XORData
+dataset = ANDData
 
 train_dataloader = torch.utils.data.DataLoader(dataset(1000), batch_size=batch_size, shuffle=True)
 test_dataloader  = torch.utils.data.DataLoader(dataset(100),  batch_size=batch_size, shuffle=True)
@@ -38,20 +38,22 @@ for epoch in tqdm.tqdm(range(1, 1001)):
     accuracy, atrition = compute_accuracy_and_atrition(dag, test_dataloader, accuracy)
     epoch_loss, regularizer_loss = train_epoch(dag, train_dataloader, optimizer, atrition=atrition)
 
-
+    action_cooldown = 5
+    threshold = 0.9
     structural_change = False
-    if not cooldown and epoch % 10 == 0 and len(dag.hidden_nodes) > 1 and atrition > 0.75:
-        new_params = dag.disable_weakest_node()
-        structural_change = True
-    # if epoch % 7 == 0:
-    if not cooldown and epoch > 20 and atrition > 0.75:
-        new_params = dag.disable_weakest_edge()
-        structural_change = True
-    if not cooldown and epoch > 20 and atrition > 0.75:
-        dag.contract_one_node_with_only_one_edge()
-        structural_change = True
+    if not cooldown and atrition > threshold:
+        if dag.disable_weakest_node():
+            cooldown = action_cooldown
+            structural_change = True
+    if not cooldown and atrition > threshold:
+        if dag.disable_weakest_edge():
+            cooldown = action_cooldown
+            structural_change = True
+    if not cooldown and atrition > threshold:
+        if dag.contract_one_node_with_only_one_edge():
+            structural_change = True
+            cooldown = action_cooldown
     if structural_change:
-        cooldown = 5
         optimizer = recreate_optimizer()
     else:
         cooldown = max(0, cooldown - 1)

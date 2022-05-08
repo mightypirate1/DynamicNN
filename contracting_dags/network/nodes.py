@@ -127,6 +127,7 @@ class InputNode(Node):
     def __init__(self, id, time_created=None):
         super().__init__(id, time_created=time_created, role='input')
         self.input_weights = torch.nn.Parameter(torch.zeros(1, 1))
+        self.bias = torch.nn.Parameter(torch.zeros(1))
     def compute_output(self):
         return self.x
     def __call__(self, x):
