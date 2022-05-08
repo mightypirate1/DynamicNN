@@ -5,35 +5,38 @@ class Node(torch.nn.Module):
     weights = []
     def __init__(self, id, connections=None, time_created=None, role='hidden'):
         super().__init__()
-        self.id            = id
-        self.time_created  = time_created
-        self.input_nodes   = []
-        self.input_weights = None
-        self.precomputed   = None
-        self._disabled     = False
-        self.role          = role
+        self.id             = id
+        self.time_created   = time_created
+        self.input_nodes    = []
+        self._input_weights = None
+        self.precomputed    = None
+        self._disabled      = False
+        self.role           = role
 
         bias = torch.ones(1)
         if connections is not None:
             self.connect([*connections])
+            self.input_weights = torch.nn.Parameter(self._input_weights)
         self.bias = torch.nn.Parameter(bias)
-        self.params = torch.nn.Parameter(self.input_weights)
+
 
 
     def connect(self, new_nodes):
         new_weights = torch.nn.Parameter(0.01 * torch.randn(1, len(new_nodes)))
         self.input_nodes.extend(new_nodes)
-        if self.input_weights is None:
-            self.input_weights = new_weights
+        if self._input_weights is None:
+            self._input_weights = new_weights
         else:
-            self.input_weights = torch.cat(self.input_weights, new_weights, axis=1)
+            self._input_weights = torch.cat(self._input_weights, new_weights, axis=1)
 
 
     def compute_output(self):
         if self.precomputed is None:
-            _x = [n.output for n in self.input_nodes]
-            x = torch.cat(_x, axis=1)
-            wx = torch.sum(self.input_weights * x, axis=1, keepdim=True)
+            wx = 0
+            if len(self) > 0:
+                _x = [n.output for n in self.input_nodes]
+                x = torch.cat(_x, axis=1)
+                wx = torch.sum(self.input_weights * x, axis=1, keepdim=True)
             y = wx - self.bias
             if self.role == 'hidden':
                 # y = torch.nn.Tanh()(y)
@@ -64,13 +67,25 @@ class Node(torch.nn.Module):
                 [part1, part2],
                 dim=1,
             )
-        self.input_nodes = [n for n in self.input_nodes if n.id != other.id]
+        nodes = [n for n in self.input_nodes if n != other]
+        self.input_nodes = nodes #torch.nn.ModuleList(nodes)
         self.input_weights = torch.nn.Parameter(new_weights)
         return new_weights
 
+    def replace_input_node(self, target_node, replacement_node):
+        print(f"REPLACING: {target_node.id} -> {replacement_node.id}")
+        if replacement_node in self.input_nodes:
+            self.disconnect_from(target_node)
+        else:
+            nodes = [
+                (replacement_node if node == target_node else node)
+                for node in self.input_nodes
+            ]
+            self.input_nodes = nodes #torch.nn.ModuleList(nodes)
+
 
     def compute_connection_strength_to(self, other):
-        mask = torch.Tensor([int(n.id == other.id) for n in self.input_nodes])
+        mask = torch.Tensor([int(node == other) for node in self.input_nodes])
         return torch.sum(mask * torch.abs(self.input_weights))
 
 
@@ -80,6 +95,10 @@ class Node(torch.nn.Module):
 
     def __eq__(self, other):
         return self.id == other.id
+
+
+    def __len__(self):
+        return len(self.input_nodes)
 
 
     def __hash__(self):
@@ -93,7 +112,14 @@ class Node(torch.nn.Module):
 
     @property
     def output(self):
-        return self.compute_output()
+        try:
+            return self.compute_output()
+        except Exception as e:
+            print(self)
+            print(self.input_nodes)
+            print(self.input_weights)
+            print(self.bias)
+            raise e
 
 
 
