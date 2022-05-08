@@ -3,6 +3,8 @@ import torch
 from torch.nn.functional import binary_cross_entropy_with_logits
 from torch.optim import Adam
 
+from utils.torch_utils import to_float, torch_abs
+
 def train_epoch(
     dag,
     train_dataloader,
@@ -57,8 +59,3 @@ def compute_accuracy_and_atrition(dag, dataloader, old_accuracy):
     accuracy = to_float((1.0 - 0.05) * old_accuracy + 0.05 * (acc / batch_n))
     atrition = np.clip(2 * accuracy - 1, 0., 1.)
     return accuracy, atrition
-
-def to_float(x):
-    return float(x.detach().numpy())
-def torch_abs(x):
-    return x + 2 * torch.nn.ReLU()(-x)

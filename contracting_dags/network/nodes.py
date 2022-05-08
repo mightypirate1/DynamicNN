@@ -21,7 +21,7 @@ class Node(torch.nn.Module):
 
 
     def connect(self, new_nodes):
-        new_weights = torch.nn.Parameter(0.1 * torch.randn(1, len(new_nodes)))
+        new_weights = torch.nn.Parameter(0.01 * torch.randn(1, len(new_nodes)))
         self.input_nodes.extend(new_nodes)
         if self.input_weights is None:
             self.input_weights = new_weights

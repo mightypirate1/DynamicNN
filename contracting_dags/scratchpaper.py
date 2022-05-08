@@ -3,7 +3,8 @@ import numpy as np
 import tqdm
 from network.dag import DAG
 from data.xor import XORData
-from training.train_utils import train_epoch, compute_accuracy_and_atrition, to_float
+from training.train_utils import train_epoch, compute_accuracy_and_atrition
+from utils.torch_utils import to_float
 from tools.visualize import draw_dag, draw_dag_weights
 
 batch_size = 100
@@ -31,7 +32,7 @@ for epoch in tqdm.tqdm(range(1, 101)):
     accuracy, atrition = compute_accuracy_and_atrition(dag, test_dataloader, accuracy)
     epoch_loss, regularizer_loss = train_epoch(dag, train_dataloader, optimizer, atrition=atrition)
 
-    if epoch % 10 == 0 and len(dag.hidden_nodes) > 2:
+    if epoch % 10 == 0 and len(dag.hidden_nodes) > 1:
         new_params = dag.disable_weakest_node()
         optimizer = recreate_optimizer()
 
